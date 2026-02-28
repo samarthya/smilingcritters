@@ -1,0 +1,17 @@
+[server]
+# Allow HTML in st.markdown(unsafe_allow_html=True)
+# Required for custom styling to work correctly
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+# Don't open browser automatically (useful when running on a server)
+gatherUsageStats = false
+
+[theme]
+# Soft warm base theme — our CSS overrides most of this
+primaryColor = "#6C3FC8"
+backgroundColor = "#F8F4FF"
+secondaryBackgroundColor = "#EDE9FF"
+textColor = "#2D2D2D"
+font = "sans serif"

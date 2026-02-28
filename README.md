@@ -40,7 +40,7 @@ cp .env.example .env
 ### 4. (Optional but recommended) Set up local AI with Ollama
 ```bash
 # Install Ollama: https://ollama.ai
-ollama pull llama3.1:8b
+ollama pull llama3:latest
 ollama serve  # starts on http://localhost:11434
 ```
 
@@ -58,8 +58,8 @@ Open **http://localhost:8501** in your browser.
 The app uses a **smart routing system**:
 
 1. **🏠 Local AI (Ollama)** — tried first. Fully private, zero cost, runs on your Mac.
-   - Recommended model: `llama3.1:8b` or `mistral:7b`
-   - Pull with: `ollama pull llama3.1:8b`
+   - Recommended model: `llama3:latest` or `mistral:7b`
+   - Pull with: `ollama pull llama3:latest`
 
 2. **☁️ Cloud AI (Gemini Flash)** — used automatically when Ollama is unavailable.
    - Get a free API key at [ai.google.dev](https://ai.google.dev)

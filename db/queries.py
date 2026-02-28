@@ -83,7 +83,7 @@ def init_db():
     # The parent dashboard can override these at runtime, but env is the source of truth
     # on a fresh start or after the DB is wiped.
     ollama_url   = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    ollama_model = os.getenv("OLLAMA_MODEL", "llama3:latest")
     gemini_key   = os.getenv("GEMINI_API_KEY", "")
 
     # Only overwrite with env value if the DB key is missing OR still has the old localhost default

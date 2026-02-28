@@ -220,9 +220,9 @@ def _render_dashboard():
         with col_model:
             ollama_model = st.text_input(
                 "Model name",
-                value=settings.get("ollama_model") or os.getenv("OLLAMA_MODEL", "llama3.1:latest"),
+                value=settings.get("ollama_model") or os.getenv("OLLAMA_MODEL", "llama3:latest"),
                 help="Must be pulled first: ollama pull <model>",
-                placeholder="llama3.1:8b",
+                placeholder="llama3:latest",
             )
 
         # Live connection test

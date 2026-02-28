@@ -200,7 +200,7 @@ Connect to locally running Ollama as primary LLM. Auto-detect availability and f
 ## Test Steps
 ```bash
 ollama serve
-ollama pull llama3.1:8b
+ollama pull llama3:latest
 # Open app, check "🏠 Local" indicator
 ollama stop  # check fallback to ☁️ Cloud
 ```

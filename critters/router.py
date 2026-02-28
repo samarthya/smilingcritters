@@ -18,7 +18,7 @@ load_dotenv()  # Load .env file — must happen before any os.getenv() calls
 
 # Defaults from env (can be overridden by DB settings at call time)
 _DEFAULT_OLLAMA_URL   = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-_DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+_DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:latest")
 _DEFAULT_GEMINI_KEY   = os.getenv("GEMINI_API_KEY", "")
 
 GEMINI_MODEL = "gemini-1.5-flash"

@@ -217,7 +217,7 @@ def _render_ollama_debug(status: dict):
         ok = ollama.get("available", False)
         icon = "✅" if ok else "❌"
         st.markdown(f"**{icon} Ollama (Local)**")
-        st.code(f"URL:   {ollama.get('url', 'http://localhost:11434')}\nModel: {ollama.get('model', 'llama3.1:8b')}\nStatus: {'Connected' if ok else 'Not reachable'}")
+        st.code(f"URL:   {ollama.get('url', 'http://localhost:11434')}\nModel: {ollama.get('model', 'llama3:latest')}\nStatus: {'Connected' if ok else 'Not reachable'}")
         if not ok:
             st.markdown("""
 **To fix:**
@@ -226,7 +226,7 @@ def _render_ollama_debug(status: dict):
 ollama serve
 
 # Pull a model if you haven't yet
-ollama pull llama3.1:8b
+ollama pull llama3:latest
 ```
             """)
 
