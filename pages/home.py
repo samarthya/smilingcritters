@@ -101,16 +101,15 @@ def render_home():
             </div>
             """, unsafe_allow_html=True)
 
-            # Chat button below card
-            btn_color = critter["color"]
+            # Inject per-critter button colour using a unique key class
             st.markdown(f"""
             <style>
-            div[data-testid="column"]:nth-child({i+1}) .stButton > button {{
-                background: linear-gradient(135deg, {btn_color}, {btn_color}CC) !important;
-                margin-top: 0.5rem;
-                width: 100%;
+            [data-testid="stButton"] button[kind="secondary"]#btn_{critter['id']},
+            div.critter-btn-{critter['id']} button {{
+                background: linear-gradient(135deg, {critter['color']}, {critter['color']}CC) !important;
             }}
             </style>
+            <div class="critter-btn-{critter['id']}">
             """, unsafe_allow_html=True)
 
             if st.button(
@@ -125,6 +124,8 @@ def render_home():
                 st.session_state.session_start   = None
                 st.session_state.wellness_shown  = set()
                 st.rerun()
+
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Bottom nav ─────────────────────────────────────────────────────────────
     st.markdown("<br>", unsafe_allow_html=True)

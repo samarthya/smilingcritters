@@ -9,6 +9,7 @@ import os
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).parent.parent / "data" / "smiling_critters.db"))
@@ -72,6 +73,10 @@ def init_db():
         "quiet_hours_end":   "07:00",
         "child_name":        "Friend",
         "llm_prefer_local":  "1",
+        # AI config — defaults to env vars; overridable in parent dashboard
+        "ollama_url":        os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        "ollama_model":      os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
+        "gemini_key":        os.getenv("GEMINI_API_KEY", ""),
     }
     for k, v in defaults.items():
         conn.execute(
@@ -107,7 +112,7 @@ def end_session(session_id: int, duration_s: int, message_count: int):
     conn.close()
 
 
-def get_recent_sessions(limit: int = 20) -> list[dict]:
+def get_recent_sessions(limit: int = 20) -> List[Dict]:
     conn = _get_conn()
     rows = conn.execute(
         "SELECT * FROM sessions ORDER BY started_at DESC LIMIT ?", (limit,)
@@ -137,7 +142,7 @@ def save_message(
     return msg_id
 
 
-def get_session_messages(session_id: int) -> list[dict]:
+def get_session_messages(session_id: int) -> List[Dict]:
     conn = _get_conn()
     rows = conn.execute(
         "SELECT * FROM messages WHERE session_id=? ORDER BY timestamp ASC",
@@ -167,7 +172,7 @@ def save_flag(
     conn.close()
 
 
-def get_unacknowledged_flags() -> list[dict]:
+def get_unacknowledged_flags() -> List[Dict]:
     conn = _get_conn()
     rows = conn.execute(
         """SELECT f.*, m.content as message_content
@@ -187,7 +192,7 @@ def acknowledge_flag(flag_id: int):
     conn.close()
 
 
-def get_all_flags(limit: int = 50) -> list[dict]:
+def get_all_flags(limit: int = 50) -> List[Dict]:
     conn = _get_conn()
     rows = conn.execute(
         """SELECT f.*, m.content as message_content
@@ -201,7 +206,7 @@ def get_all_flags(limit: int = 50) -> list[dict]:
 
 # ─── Settings ────────────────────────────────────────────────────────────────
 
-def get_setting(key: str, default=None) -> str | None:
+def get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
     conn = _get_conn()
     row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
     conn.close()

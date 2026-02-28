@@ -201,17 +201,70 @@ def _render_dashboard():
 
         st.divider()
         st.markdown("**AI Settings**")
+
+        import os
         prefer_local = st.checkbox(
             "Prefer local AI (Ollama) — most private",
             value=settings.get("llm_prefer_local", "1") == "1"
         )
-        ollama_url = st.text_input("Ollama URL", value=settings.get("ollama_url", "http://localhost:11434"))
-        gemini_key_set = "✅ Set" if settings.get("gemini_key_set") == "1" else "❌ Not set"
-        st.markdown(f"Gemini API Key: **{gemini_key_set}** (set in .env file)")
-        if st.button("Save AI settings"):
+
+        st.markdown("**🏠 Ollama (Local AI)**")
+        col_url, col_model = st.columns([3, 2])
+        with col_url:
+            ollama_url = st.text_input(
+                "Ollama URL",
+                value=settings.get("ollama_url") or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                help="Change this if Ollama runs on a different machine, e.g. http://192.168.1.10:11434",
+                placeholder="http://localhost:11434",
+            )
+        with col_model:
+            ollama_model = st.text_input(
+                "Model name",
+                value=settings.get("ollama_model") or os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
+                help="Must be pulled first: ollama pull <model>",
+                placeholder="llama3.1:8b",
+            )
+
+        # Live connection test
+        if st.button("🔌 Test Ollama connection", key="test_ollama"):
+            import requests as _req
+            try:
+                r = _req.get(f"{ollama_url.rstrip('/')}/api/tags", timeout=3)
+                if r.status_code == 200:
+                    models = [m["name"] for m in r.json().get("models", [])]
+                    st.success(f"✅ Connected! Models available: {', '.join(models) or 'none pulled yet'}")
+                    if ollama_model not in models:
+                        st.warning(f"⚠️ Model '{ollama_model}' not found. Run: `ollama pull {ollama_model}`")
+                else:
+                    st.error(f"❌ Reachable but returned status {r.status_code}")
+            except Exception as e:
+                st.error(f"❌ Cannot reach {ollama_url} — is Ollama running? (`ollama serve`)")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("**☁️ Gemini (Cloud fallback)**")
+
+        # Show current Gemini key status
+        current_key = settings.get("gemini_key") or os.getenv("GEMINI_API_KEY", "")
+        has_key = bool(current_key) and current_key != "your_gemini_api_key_here"
+        st.markdown(f"Current status: {'✅ API key is set' if has_key else '❌ No API key — Gemini unavailable as fallback'}")
+
+        gemini_key_input = st.text_input(
+            "Gemini API key",
+            type="password",
+            value="",
+            placeholder="Paste new key here (leave blank to keep existing)",
+            help="Get a free key at https://ai.google.dev — Gemini Flash has a generous free tier",
+        )
+
+        if st.button("💾 Save AI settings", key="save_ai"):
             set_setting("llm_prefer_local", "1" if prefer_local else "0")
-            set_setting("ollama_url", ollama_url)
-            st.success("Saved! Restart the app to apply Ollama URL changes.")
+            set_setting("ollama_url",   ollama_url.strip())
+            set_setting("ollama_model", ollama_model.strip())
+            if gemini_key_input.strip():
+                set_setting("gemini_key", gemini_key_input.strip())
+                st.success("✅ All AI settings saved — changes take effect immediately, no restart needed!")
+            else:
+                st.success("✅ Ollama settings saved — changes take effect immediately!")
 
         st.divider()
         st.markdown("**Security**")
