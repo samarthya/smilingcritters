@@ -22,7 +22,7 @@
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/YOUR_USERNAME/smiling-critters.git
+git clone https://github.com/samarthya/smiling-critters.git
 cd smiling-critters
 ```
 
