@@ -33,7 +33,8 @@ def _get_config() -> Dict[str, str]:
         from db.queries import get_setting
         ollama_url   = get_setting("ollama_url")   or _DEFAULT_OLLAMA_URL
         ollama_model = get_setting("ollama_model") or _DEFAULT_OLLAMA_MODEL
-        gemini_key   = get_setting("gemini_key")   or _DEFAULT_GEMINI_KEY
+        gemini_key_db = get_setting("gemini_key") or ""
+        gemini_key   = gemini_key_db if (gemini_key_db and gemini_key_db != "your_gemini_api_key_here") else _DEFAULT_GEMINI_KEY
     except Exception:
         # DB not ready yet (e.g. first run before init_db) — fall back to env
         ollama_url   = _DEFAULT_OLLAMA_URL

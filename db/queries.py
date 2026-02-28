@@ -63,8 +63,8 @@ def init_db():
     """)
     conn.commit()
 
-    # Insert defaults if not present
-    defaults = {
+    # User-configurable defaults — only set if not already in DB (preserve user changes)
+    user_defaults = {
         "parent_pin":        "1234",
         "daily_limit_min":   "45",
         "reminder_30":       "1",
@@ -73,14 +73,36 @@ def init_db():
         "quiet_hours_end":   "07:00",
         "child_name":        "Friend",
         "llm_prefer_local":  "1",
-        # AI config — defaults to env vars; overridable in parent dashboard
-        "ollama_url":        os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-        "ollama_model":      os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
-        "gemini_key":        os.getenv("GEMINI_API_KEY", ""),
     }
-    for k, v in defaults.items():
+    for k, v in user_defaults.items():
         conn.execute(
             "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v)
+        )
+
+    # AI config — ALWAYS sync from env vars on startup so .env changes take effect.
+    # The parent dashboard can override these at runtime, but env is the source of truth
+    # on a fresh start or after the DB is wiped.
+    ollama_url   = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    gemini_key   = os.getenv("GEMINI_API_KEY", "")
+
+    # Only overwrite with env value if the DB key is missing OR still has the old localhost default
+    # (meaning user hasn't changed it in the dashboard). This preserves custom dashboard settings.
+    conn.execute(
+        "INSERT OR IGNORE INTO settings (key, value) VALUES ('ollama_url', ?)", (ollama_url,)
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO settings (key, value) VALUES ('ollama_model', ?)", (ollama_model,)
+    )
+    # For Gemini key: only write from env if DB doesn't have one yet
+    conn.execute(
+        "INSERT OR IGNORE INTO settings (key, value) VALUES ('gemini_key', ?)", (gemini_key,)
+    )
+    # If env has a real Gemini key but DB has empty string, update it
+    if gemini_key and gemini_key != "your_gemini_api_key_here":
+        conn.execute(
+            "UPDATE settings SET value=? WHERE key='gemini_key' AND (value='' OR value='your_gemini_api_key_here')",
+            (gemini_key,)
         )
     conn.commit()
     conn.close()

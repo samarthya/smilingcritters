@@ -213,14 +213,14 @@ def _render_dashboard():
         with col_url:
             ollama_url = st.text_input(
                 "Ollama URL",
-                value=settings.get("ollama_url") or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                value=settings.get("ollama_url") or os.getenv("OLLAMA_BASE_URL", "http://172.22.112.1:11434"),
                 help="Change this if Ollama runs on a different machine, e.g. http://192.168.1.10:11434",
                 placeholder="http://localhost:11434",
             )
         with col_model:
             ollama_model = st.text_input(
                 "Model name",
-                value=settings.get("ollama_model") or os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
+                value=settings.get("ollama_model") or os.getenv("OLLAMA_MODEL", "llama3.1:latest"),
                 help="Must be pulled first: ollama pull <model>",
                 placeholder="llama3.1:8b",
             )
