@@ -79,30 +79,35 @@ def init_db():
             "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v)
         )
 
-    # AI config — ALWAYS sync from env vars on startup so .env changes take effect.
-    # The parent dashboard can override these at runtime, but env is the source of truth
-    # on a fresh start or after the DB is wiped.
+    # AI config — env is the source of truth on startup.
+    # ollama_url / ollama_model: always overwrite from env so that changes to
+    # .env take effect immediately without wiping the DB.  Parent-dashboard
+    # overrides survive only until the next restart (intentional: .env wins).
+    # gemini_key: write from env if the DB key is blank; clear from DB if env
+    # is now empty (key was commented out) so Gemini isn't used unexpectedly.
     ollama_url   = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model = os.getenv("OLLAMA_MODEL", "llama3:latest")
     gemini_key   = os.getenv("GEMINI_API_KEY", "")
 
-    # Only overwrite with env value if the DB key is missing OR still has the old localhost default
-    # (meaning user hasn't changed it in the dashboard). This preserves custom dashboard settings.
     conn.execute(
-        "INSERT OR IGNORE INTO settings (key, value) VALUES ('ollama_url', ?)", (ollama_url,)
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('ollama_url', ?)", (ollama_url,)
     )
     conn.execute(
-        "INSERT OR IGNORE INTO settings (key, value) VALUES ('ollama_model', ?)", (ollama_model,)
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('ollama_model', ?)", (ollama_model,)
     )
-    # For Gemini key: only write from env if DB doesn't have one yet
-    conn.execute(
-        "INSERT OR IGNORE INTO settings (key, value) VALUES ('gemini_key', ?)", (gemini_key,)
-    )
-    # If env has a real Gemini key but DB has empty string, update it
+
     if gemini_key and gemini_key != "your_gemini_api_key_here":
+        # Env has a real key — write it (INSERT or overwrite blank/placeholder)
         conn.execute(
-            "UPDATE settings SET value=? WHERE key='gemini_key' AND (value='' OR value='your_gemini_api_key_here')",
+            """INSERT INTO settings (key, value) VALUES ('gemini_key', ?)
+               ON CONFLICT(key) DO UPDATE SET value=excluded.value
+               WHERE value='' OR value='your_gemini_api_key_here'""",
             (gemini_key,)
+        )
+    else:
+        # Env key absent / commented out — seed blank only if no DB key exists yet
+        conn.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES ('gemini_key', '')"
         )
     conn.commit()
     conn.close()
@@ -116,7 +121,7 @@ def start_session(critter_id: str) -> int:
         "INSERT INTO sessions (critter_id, started_at) VALUES (?, ?)",
         (critter_id, datetime.now().isoformat())
     )
-    session_id = cur.lastrowid
+    session_id = cur.lastrowid or 0
     conn.commit()
     conn.close()
     return session_id
@@ -158,7 +163,7 @@ def save_message(
            VALUES (?, ?, ?, ?, ?, ?)""",
         (session_id, role, content, critter_id, datetime.now().isoformat(), flagged)
     )
-    msg_id = cur.lastrowid
+    msg_id = cur.lastrowid or 0
     conn.commit()
     conn.close()
     return msg_id

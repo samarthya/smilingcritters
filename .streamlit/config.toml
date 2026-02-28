@@ -1,4 +1,9 @@
 [server]
+# Bind to all interfaces so WSL2 portproxy (and direct LAN access) can reach it.
+# Without this Streamlit only listens on 127.0.0.1 inside WSL2.
+address = "0.0.0.0"
+port = 8501
+
 # Allow HTML in st.markdown(unsafe_allow_html=True)
 # Required for custom styling to work correctly
 enableCORS = false

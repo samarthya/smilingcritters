@@ -84,10 +84,12 @@ def render_chat():
     with col_status:
         status = check_llm_status()
         active = status.get("active", "none")
+        backoff_secs = status.get("gemini", {}).get("backoff_secs", 0)
         status_html = {
-            "ollama": '<span style="background:#E8F5E9;color:#2E7D32;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;">🏠 Local</span>',
-            "gemini": '<span style="background:#E3F2FD;color:#1565C0;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;">☁️ Cloud</span>',
-            "none":   '<span style="background:#FFEBEE;color:#C62828;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;">❌ Off</span>',
+            "ollama":       '<span style="background:#E8F5E9;color:#2E7D32;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;">🏠 Local</span>',
+            "gemini":       '<span style="background:#E3F2FD;color:#1565C0;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;">☁️ Cloud</span>',
+            "rate_limited": f'<span style="background:#FFF3E0;color:#E65100;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;" title="Gemini rate-limited, retrying in {backoff_secs}s">⏳ Cooling</span>',
+            "none":         '<span style="background:#FFEBEE;color:#C62828;border-radius:12px;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;">❌ Off</span>',
         }.get(active, "")
         st.markdown(f'<div style="padding-top:0.8rem;text-align:right;">{status_html}</div>', unsafe_allow_html=True)
 
@@ -103,7 +105,7 @@ def render_chat():
 
     # ── Session timer ─────────────────────────────────────────────────────────
     elapsed      = _elapsed_minutes()
-    daily_limit  = int(get_setting("daily_limit_min", "45"))
+    daily_limit  = int(get_setting("daily_limit_min") or "45")
     progress     = min(elapsed / daily_limit, 1.0)
     bar_color    = "#4CAF50" if progress < 0.6 else ("#FF9800" if progress < 0.9 else "#F44336")
 
