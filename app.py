@@ -56,7 +56,7 @@ init_db()
 if "page" not in st.session_state:
     st.session_state.page = "home"
 if "current_critter" not in st.session_state:
-    st.session_state.current_critter = "pip"
+    st.session_state.current_critter = "bubba"
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
 if "parent_authenticated" not in st.session_state:

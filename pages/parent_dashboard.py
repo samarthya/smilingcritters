@@ -135,7 +135,7 @@ def _render_dashboard():
             messages = get_session_messages(selected_id)
             if messages:
                 for msg in messages:
-                    critter_id = msg.get("critter_id", "pip")
+                    critter_id = msg.get("critter_id", "bubba")
                     c = get_critter(critter_id)
                     flag_int = msg.get("flagged", 0)
                     flag_label = ["", " ↩️", " ⚠️", " 🚨"][flag_int] if flag_int else ""

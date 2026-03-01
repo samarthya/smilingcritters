@@ -43,7 +43,7 @@ EMOTIONS = {
 }
 
 
-def render_emotion_wheel(critter_id: str = "luna") -> str | None:
+def render_emotion_wheel(critter_id: str = "bobby") -> str | None:
     """
     Renders the emotion wheel UI.
     Returns the selected emotion label string, or None if nothing selected.
@@ -51,8 +51,8 @@ def render_emotion_wheel(critter_id: str = "luna") -> str | None:
 
     st.markdown("""
     <div style="text-align:center; margin-bottom:1rem;" class="fade-in">
-        <div style="font-size:1.8rem;">🦋</div>
-        <div style="font-family:'Nunito',sans-serif; font-size:1.2rem; font-weight:800; color:#C06DC8;">
+        <div style="font-size:1.8rem;">🐻</div>
+        <div style="font-family:'Nunito',sans-serif; font-size:1.2rem; font-weight:800; color:#E84040;">
             How are you feeling right now?
         </div>
         <div style="color:#aaa; font-size:0.85rem; margin-top:0.2rem;">
@@ -141,7 +141,7 @@ def render_emotion_wheel(critter_id: str = "luna") -> str | None:
 
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("💬 Tell Luna about it", use_container_width=True):
+                        if st.button("💬 Tell Bobby about it", use_container_width=True):
                             return label
                     with col2:
                         if st.button("↩️ Pick a different feeling", use_container_width=True):

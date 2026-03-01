@@ -60,6 +60,22 @@ def init_db():
             key         TEXT PRIMARY KEY,
             value       TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS journal_entries (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id      INTEGER REFERENCES sessions(id),
+            critter_id      TEXT    NOT NULL,
+            critter_name    TEXT,
+            critter_emoji   TEXT,
+            critter_color   TEXT,
+            critter_bg      TEXT,
+            date            TEXT,
+            time            TEXT,
+            message_count   INTEGER DEFAULT 0,
+            preview         TEXT,
+            duration_min    INTEGER DEFAULT 0,
+            created_at      TEXT    NOT NULL
+        );
     """)
     conn.commit()
 
@@ -283,3 +299,48 @@ def get_usage_stats() -> dict:
         "critter_usage": [dict(r) for r in critter_usage],
         "avg_session_min": round(recent_duration / 60, 1),
     }
+
+
+# ─── Journal entries ─────────────────────────────────────────────────────────
+
+def save_journal_entry(
+    session_id: int,
+    critter_id: str,
+    critter_name: str,
+    critter_emoji: str,
+    critter_color: str,
+    critter_bg: str,
+    date: str,
+    time_str: str,
+    message_count: int,
+    preview: str,
+    duration_min: int,
+) -> int:
+    conn = _get_conn()
+    cur = conn.execute(
+        """INSERT INTO journal_entries
+           (session_id, critter_id, critter_name, critter_emoji, critter_color,
+            critter_bg, date, time, message_count, preview, duration_min, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (session_id, critter_id, critter_name, critter_emoji, critter_color,
+         critter_bg, date, time_str, message_count, preview, duration_min,
+         datetime.now().isoformat()),
+    )
+    conn.commit()
+    entry_id = cur.lastrowid
+    conn.close()
+    return entry_id
+
+
+def get_journal_entries(limit: int = 50) -> List[Dict]:
+    conn = _get_conn()
+    rows = conn.execute(
+        """SELECT je.*, s.id as sid
+           FROM journal_entries je
+           LEFT JOIN sessions s ON je.session_id = s.id
+           ORDER BY je.created_at DESC
+           LIMIT ?""",
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

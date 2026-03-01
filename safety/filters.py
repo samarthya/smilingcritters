@@ -60,11 +60,14 @@ _crisis_re   = re.compile("|".join(_CRISIS_PATTERNS), re.IGNORECASE)
 # ─── Redirect messages (critter-specific tones) ──────────────────────────────
 
 _REDIRECT_MESSAGES = {
-    "pip":   "Ooh, that's a bit outside what I can chat about! Let's keep things cosy ✨ Tell me — is there something fun you're learning about? 🦔",
-    "luna":  "Hmm, that's not something I can talk about 💜 But I'm all ears for how you're *feeling* today. What's going on in your heart? 🦋",
-    "finn":  "Ooh, let's steer our adventure somewhere more magical! 🗺️ What if a friendly dragon showed up right now — what would happen? 🦊",
-    "shelby":"Let's keep our space calm and safe 🐢 Can we take a slow breath together and talk about something peaceful? 💙",
-    "stella":"Hmm, let's find something even more amazing to wonder about! 🌟 Did you know there are more stars in space than grains of sand on Earth? ✨",
+    "bubba":  "Ooh, that's a bit outside what I can chat about! Let's keep things cosy ✨ Tell me — is there something fun you're learning about? 🐘",
+    "bobby":  "Hmm, that's not something I can talk about ❤️ But I'm all ears for how you're *feeling* today. What's going on in your heart? 🐻",
+    "dogday": "Ooh, let's steer our adventure somewhere more magical! 🗺️ What if a friendly dragon showed up right now? 🐕",
+    "catnap": "Let's keep our space calm and soft 🐱 Can we take a slow breath together and talk about something peaceful? 💜",
+    "kickin": "Hmm, let's find something even more amazing to wonder about! 🐔 Did you know there are more stars in space than grains of sand on Earth? ✨",
+    "hoppy":  "Ooh, let's hop over to something way more fun! 🐇 What's your favourite game we could play right now? ⚡",
+    "piggy":  "Hmm, let's chat about something more fun! 🐷 Did you eat something yummy today? Tell me! 🍎",
+    "crafty": "Let's sparkle somewhere more magical! 🦄 What if we made up a rainbow creature together instead? 🌈",
 }
 
 _CRISIS_RESPONSE = """I hear you, and I care about you so much 💜
@@ -80,7 +83,7 @@ You are loved. You matter. 💜🦋"""
 
 # ─── Public API ──────────────────────────────────────────────────────────────
 
-def check_input(text: str, critter_id: str = "pip") -> SafetyResult:
+def check_input(text: str, critter_id: str = "bubba") -> SafetyResult:
     """Screen a child's message before sending to the LLM."""
     t = text.strip()
 
@@ -103,7 +106,7 @@ def check_input(text: str, critter_id: str = "pip") -> SafetyResult:
         return SafetyResult(
             level=FlagLevel.REDIRECT,
             reason="Off-limits topic",
-            redirect_message=_REDIRECT_MESSAGES.get(critter_id, _REDIRECT_MESSAGES["pip"])
+            redirect_message=_REDIRECT_MESSAGES.get(critter_id, _REDIRECT_MESSAGES["bubba"])
         )
 
     return SafetyResult(level=FlagLevel.SAFE)
@@ -130,28 +133,34 @@ def check_output(text: str) -> SafetyResult:
     return SafetyResult(level=FlagLevel.SAFE)
 
 
-def wellness_reminder(minutes_elapsed: float, critter_id: str = "pip") -> str | None:
+def wellness_reminder(minutes_elapsed: float, critter_id: str = "bubba") -> str | None:
     """
     Returns a wellness reminder message if appropriate, else None.
     Thresholds: 30 min gentle, 60 min strong.
     """
     reminders_30 = {
-        "pip":   "Psst! We've been chatting for 30 minutes! My little hedgehog eyes are getting a tiny bit tired 😴 Want to take a 5-minute break and come back? I'll save our spot! 🦔",
-        "luna":  "Hey friend 💜 We've been talking for a while. It's okay to take a little break — your eyes and body deserve a rest too! I'll be right here 🦋",
-        "finn":  "Whoa, we've had SO many adventures in the last 30 minutes! 🦊 Even great explorers need a rest! Want to take a quick break before our next quest? 🗺️",
-        "shelby":"We've been here for 30 minutes 🐢 Slow and steady — that includes resting! A little break will help us feel even better 💙",
-        "stella":"Fun fact: resting actually helps your brain remember all the amazing things we talked about! 🌟 Want to take a 5-minute break? Science says it helps! ✨",
+        "bubba":  "Psst! We've been chatting for 30 minutes! A little break will help your brain remember everything! Want to rest and come back? 🐘✨",
+        "bobby":  "Hey friend 🐻❤️ We've been talking for a while. It's okay to take a little break — your eyes and body deserve a rest too! I'll be right here!",
+        "dogday": "Whoa, we've had SO many adventures in the last 30 minutes! 🐕 Even great explorers need a rest! Quick break before the next quest? 🗺️",
+        "catnap": "We've been here for 30 minutes 🐱 Time for a little catnap break! Your body will feel even calmer after... 💜",
+        "kickin": "Fun fact: resting helps your brain remember all the amazing things we talked about! 🐔 Want a 5-minute break? Science says it helps! ✨",
+        "hoppy":  "Wow 30 minutes of fun! 🐇 Even Hoppy needs to stop and wiggle around! Take a 5-minute movement break? ⚡",
+        "piggy":  "30 minutes! Maybe time for a little snack AND a break? 🐷 Come back when you're refreshed! 🍎",
+        "crafty": "30 magical minutes! 🦄 Step away, rest your eyes, and come back with even MORE sparkly ideas! 🌈",
     }
     reminders_60 = {
-        "pip":   "Wow, we've been learning together for a whole hour! 📚 That's amazing — but even the best students need a proper rest now. I'll be right here when you come back! 🦔⭐",
-        "luna":  "An hour together 💜 I love our chats SO much. But it's really time for a proper break now — your body and mind need it. See you soon! 🦋",
-        "finn":  "An HOUR of adventures! 🦊 That's a legendary quest! Even the bravest heroes sleep. Time for a real break — your story will be here waiting! ✨",
-        "shelby":"One hour 🐢 That's a long time. Time for a proper rest now. I'll be here, slow and steady, when you return 💙",
-        "stella":"One whole hour — your brain has taken in SO many amazing things! 🌟 Now it needs rest to process it all. Time for a real break! ✨",
+        "bubba":  "Wow, a whole hour of learning! 🐘📚 That's amazing — but even the best learners need a proper rest now. I'll be right here when you come back! ⭐",
+        "bobby":  "An hour together 🐻❤️ I love our chats SO much. But it's really time for a proper break — your body and mind need it. See you soon!",
+        "dogday": "An HOUR of adventures! 🐕 That's a legendary quest! Even the bravest explorers sleep. Time for a real break — your story will be here! 🗺️",
+        "catnap": "One hour 🐱 That's a long time even for CatNap! Time for a proper rest now. I'll be here, calm and cosy, when you return 💜",
+        "kickin": "One whole hour — your brain has taken in SO many amazing things! 🐔 Now it needs rest to sort it all out. Time for a real break! ✨",
+        "hoppy":  "AN HOUR! 🐇 That's incredible! Even Hoppy needs a real rest after that much fun. Go play outside and come back! ⚡",
+        "piggy":  "A whole hour! 🐷 Time for a proper rest AND a healthy snack. Your body will thank you! Come back soon! 🍎",
+        "crafty": "One whole magical hour! 🦄 Your brain is FULL of wonderful ideas now — let it rest and dream. More creating tomorrow! 🌈",
     }
 
     if minutes_elapsed >= 60:
-        return reminders_60.get(critter_id, reminders_60["pip"])
+        return reminders_60.get(critter_id, reminders_60["bubba"])
     elif minutes_elapsed >= 30:
-        return reminders_30.get(critter_id, reminders_30["pip"])
+        return reminders_30.get(critter_id, reminders_30["bubba"])
     return None

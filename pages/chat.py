@@ -12,9 +12,9 @@ from critters.router import get_llm_response, check_llm_status
 from safety.filters import check_input, check_output, FlagLevel, wellness_reminder
 from db.queries import (
     start_session, end_session, save_message, save_flag,
-    get_setting, get_session_messages
+    get_setting, get_session_messages, save_journal_entry
 )
-from theme import get_critter_svg
+from theme import get_critter_avatar, get_critter_pil_avatar, get_critter_icon_img
 
 
 def _init_session(critter_id: str):
@@ -25,6 +25,11 @@ def _init_session(critter_id: str):
         st.session_state.wellness_shown = set()
         st.session_state.show_emotion_wheel = False
         st.session_state.selected_emotion   = None
+    # Voice state — initialise if missing (survives across reruns within a session)
+    if "voice_key" not in st.session_state:
+        st.session_state.voice_key = 0
+    if "voice_pending" not in st.session_state:
+        st.session_state.voice_pending = None
 
 
 def _elapsed_minutes() -> float:
@@ -46,13 +51,16 @@ def _check_wellness(critter_id: str):
 
 
 def render_chat():
-    critter_id   = st.session_state.get("current_critter", "pip")
+    critter_id   = st.session_state.get("current_critter", "bubba")
     critter      = get_critter(critter_id)
     prefer_local = get_setting("llm_prefer_local", "1") == "1"
     _init_session(critter_id)
 
+    # PIL avatar — used for st.chat_message; falls back to emoji if PNGs not yet extracted
+    _pil_avatar = get_critter_pil_avatar(critter_id) or critter["emoji"]
+
     # ── Header bar ────────────────────────────────────────────────────────────
-    svg = get_critter_svg(critter_id)
+    svg = get_critter_avatar(critter_id, size=60)
     col_back, col_avatar, col_title, col_status = st.columns([1, 1, 5, 1.5])
 
     with col_back:
@@ -134,12 +142,12 @@ def render_chat():
             margin-bottom: 0.8rem;
             font-size: 0.95rem;
         ">
-            {critter['emoji']}  {wellness_msg}
+            {get_critter_icon_img(critter_id, size=32, style='margin-right:8px;')} {wellness_msg}
         </div>
         """, unsafe_allow_html=True)
 
-    # ── Luna emotion wheel toggle ─────────────────────────────────────────────
-    if critter_id == "luna":
+    # ── Bobby emotion wheel toggle ─────────────────────────────────────────────
+    if critter_id == "bobby":
         col_ew, _ = st.columns([2, 5])
         with col_ew:
             wheel_label = "🌈 Hide feelings wheel" if st.session_state.get("show_emotion_wheel") else "🌈 How am I feeling?"
@@ -167,14 +175,17 @@ def render_chat():
         if not st.session_state.chat_messages:
             child_name = get_setting("child_name", "friend")
             openings = {
-                "pip":    f"Hi {child_name}! 🦔✨ I'm SO happy you're here! Is there homework I can help with, or something cool you want to learn about?",
-                "luna":   f"Hello {child_name} 💜 I'm really glad you came. How are you feeling today? You can tell me *anything* — I'm here to listen 🦋",
-                "finn":   f"WOAH, {child_name} is here! 🦊 I've been dreaming up the BEST adventure! Want to make up a story together? 🗺️✨",
-                "shelby": f"Hello {child_name} 🐢💙 Welcome. Take a slow breath. It's nice and calm here. How are you today?",
-                "stella": f"OH WOW, {child_name}! 🌟 Did you know octopuses have THREE hearts?! Amazing right?! What amazing thing shall we wonder about today? ✨",
+                "bubba":  f"Hi {child_name}! 🐘✨ I'm SO happy you're here! Is there homework I can help with, or something cool you want to learn about?",
+                "bobby":  f"Hello {child_name} 🐻❤️ I'm really glad you came. How are you feeling today? You can tell me *anything* — I'm here to listen!",
+                "dogday": f"WOAH, {child_name} is here! 🐕 I've been dreaming up the BEST adventure! Want to make up a story together? 🗺️✨",
+                "catnap": f"Hello {child_name} 🐱💜 Welcome. Take a slow breath... It's nice and calm here. How are you today?",
+                "kickin": f"OH WOW, {child_name}! 🐔 Did you know octopuses have THREE hearts?! Amazing right?! What amazing thing shall we wonder about today? ✨",
+                "hoppy":  f"YO {child_name}! 🐇⚡ Ready to PLAY?! Let's do something super fun together! What shall we try?",
+                "piggy":  f"Hiii {child_name}! 🐷🍎 Did you have something yummy today? I LOVE hearing about good food and happy healthy things!",
+                "crafty": f"Ooooh {child_name}! 🦄🌈 I have SO many sparkly ideas for us today! Are you ready to make something magical?!",
             }
             opening = openings.get(critter_id, f"Hi {child_name}! How can I help?")
-            with st.chat_message("assistant", avatar=critter["emoji"]):
+            with st.chat_message("assistant", avatar=_pil_avatar):
                 st.markdown(
                     f'<div style="color:{critter["color"]}; font-family:Nunito Sans,sans-serif;">{opening}</div>',
                     unsafe_allow_html=True
@@ -186,16 +197,55 @@ def render_chat():
                 with st.chat_message("user", avatar="🧒"):
                     st.markdown(msg["content"])
             else:
-                with st.chat_message("assistant", avatar=critter["emoji"]):
+                with st.chat_message("assistant", avatar=_pil_avatar):
                     st.markdown(
                         f'<div style="color:{critter["color"]}; font-family:Nunito Sans,sans-serif;">{msg["content"]}</div>',
                         unsafe_allow_html=True
                     )
 
+    # ── Voice input ───────────────────────────────────────────────────────────
+    try:
+        import speech_recognition  # noqa: F401 — voice feature available
+        _voice_available = True
+    except ImportError:
+        _voice_available = False
+
+    if _voice_available:
+        with st.expander("🎤 Use your voice", expanded=False):
+            # Key rotates after each recording so the widget resets and never
+            # replays the same audio on the next rerun (prevents the loop).
+            voice_audio = st.audio_input(
+                "Tap 🔴 to record, tap again to stop — your words will be sent automatically!",
+                key=f"voice_msg_{st.session_state.voice_key}",
+            )
+            if voice_audio:
+                with st.spinner("Listening... 🎧"):
+                    voice_text = _transcribe_audio(voice_audio)
+                # Rotate key NOW so the widget is blank on the next rerun
+                st.session_state.voice_key += 1
+                if voice_text:
+                    # Stage the text — it will be sent via the normal input handler below
+                    st.session_state.voice_pending = voice_text
+                else:
+                    st.warning("Hmm, I couldn't quite hear that! Try again below. 😊")
+                st.rerun()
+
     # ── Input row ─────────────────────────────────────────────────────────────
-    col_inp, col_bye = st.columns([6, 1])
+    col_inp, col_share, col_bye = st.columns([6, 1, 1])
     with col_inp:
         user_input = st.chat_input(f"Say something to {critter['name']}... 💬")
+    with col_share:
+        msgs = st.session_state.get("chat_messages", [])
+        if msgs:
+            transcript = _build_transcript(critter["name"], msgs)
+            st.download_button(
+                "📤",
+                data=transcript,
+                file_name=f"chat-with-{critter['name'].lower().replace(' ', '-')}.txt",
+                mime="text/plain",
+                help="Download this chat as a text file to share with a grown-up",
+                key="share_chat",
+            )
     with col_bye:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("👋 Bye!", key="end_chat", help="End this chat"):
@@ -204,9 +254,14 @@ def render_chat():
             st.session_state.page = "home"
             st.rerun()
 
-    # ── Handle input ──────────────────────────────────────────────────────────
+    # ── Handle input (typed or voice) ─────────────────────────────────────────
     if user_input and user_input.strip():
         _handle_message(user_input.strip(), critter, prefer_local)
+    elif st.session_state.get("voice_pending"):
+        voice_text = st.session_state.voice_pending
+        st.session_state.voice_pending = None
+        _handle_message(voice_text, critter, prefer_local)
+        st.rerun()
 
 
 def _render_ollama_debug(status: dict):
@@ -247,8 +302,9 @@ ollama pull llama3:latest
 
 
 def _handle_message(user_text: str, critter: dict, prefer_local: bool):
-    critter_id = critter["id"]
-    safety     = check_input(user_text, critter_id)
+    critter_id  = critter["id"]
+    _pil_avatar = get_critter_pil_avatar(critter_id) or critter["emoji"]
+    safety      = check_input(user_text, critter_id)
     flag_int   = {"safe": 0, "redirect": 1, "alert": 2, "crisis": 3}.get(safety.level.value, 0)
 
     session_id = st.session_state.session_id
@@ -272,7 +328,7 @@ def _handle_message(user_text: str, critter: dict, prefer_local: bool):
         for m in st.session_state.chat_messages
     ]
 
-    with st.chat_message("assistant", avatar=critter["emoji"]):
+    with st.chat_message("assistant", avatar=_pil_avatar):
         placeholder   = st.empty()
         full_response = ""
 
@@ -315,6 +371,37 @@ def _do_end_session():
         end_session(session_id, duration, msg_count)
 
 
+def _transcribe_audio(audio_value) -> str:
+    """Transcribe recorded audio via Google Speech Recognition (free, online).
+    Returns empty string if transcription fails or the package is not installed."""
+    try:
+        import speech_recognition as sr
+        import io
+
+        recognizer = sr.Recognizer()
+        audio_bytes = io.BytesIO(audio_value.read())
+        with sr.AudioFile(audio_bytes) as source:
+            audio_data = recognizer.record(source)
+        return recognizer.recognize_google(audio_data)
+    except Exception:
+        return ""
+
+
+def _build_transcript(critter_name: str, msgs: list) -> str:
+    """Format chat messages as a plain-text transcript for export."""
+    lines = [
+        f"Chat with {critter_name}",
+        "=" * 40,
+        f"Exported: {datetime.now().strftime('%A, %d %B %Y at %H:%M')}",
+        "",
+    ]
+    for msg in msgs:
+        speaker = "You" if msg["role"] == "user" else critter_name
+        lines.append(f"{speaker}: {msg['content']}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def _save_journal_entry(critter_id: str):
     critter = get_critter(critter_id)
     msgs    = st.session_state.get("chat_messages", [])
@@ -327,16 +414,38 @@ def _save_journal_entry(critter_id: str):
     # Find last user message for preview
     user_msgs = [m["content"] for m in msgs if m["role"] == "user"]
     preview   = user_msgs[-1][:100] + "..." if user_msgs else "A lovely quiet chat!"
+    duration  = int(_elapsed_minutes())
+    date_str  = datetime.now().strftime("%A, %d %B %Y")
+    time_str  = datetime.now().strftime("%H:%M")
 
-    st.session_state.journal_entries.insert(0, {
+    entry = {
         "critter_id":    critter_id,
         "critter_name":  critter["name"],
         "critter_emoji": critter["emoji"],
         "critter_color": critter["color"],
         "critter_bg":    critter["bg_color"],
-        "date":          datetime.now().strftime("%A, %d %B %Y"),
-        "time":          datetime.now().strftime("%H:%M"),
+        "date":          date_str,
+        "time":          time_str,
         "message_count": len(user_msgs),
         "preview":       preview,
-        "duration_min":  int(_elapsed_minutes()),
-    })
+        "duration_min":  duration,
+    }
+
+    # Persist to SQLite so journal survives app restarts
+    session_id = st.session_state.get("session_id")
+    if session_id:
+        save_journal_entry(
+            session_id=session_id,
+            critter_id=critter_id,
+            critter_name=critter["name"],
+            critter_emoji=critter["emoji"],
+            critter_color=critter["color"],
+            critter_bg=critter["bg_color"],
+            date=date_str,
+            time_str=time_str,
+            message_count=len(user_msgs),
+            preview=preview,
+            duration_min=duration,
+        )
+
+    st.session_state.journal_entries.insert(0, entry)

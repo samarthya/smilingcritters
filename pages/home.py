@@ -8,7 +8,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from critters.personas import get_all_critters
 from db.queries import get_setting
-from theme import get_critter_svg
+from theme import get_critter_avatar, get_critter_icon_img, get_critter_pil_avatar
 
 
 def _go_to_chat(critter_id: str):
@@ -67,7 +67,7 @@ def render_home():
     )
 
     # ── Featured card (iframe) + nav arrows ────────────────────────────────────
-    svg = get_critter_svg(critter["id"])
+    svg = get_critter_avatar(critter["id"], size=140)
 
     card_html = f"""
     <!DOCTYPE html>
@@ -178,8 +178,12 @@ def render_home():
 
     _, col_cta, _ = st.columns([2, 3, 2])
     with col_cta:
+        # Show icon above the CTA button
+        icon_html = get_critter_icon_img(critter["id"], size=36, style="display:block;margin:0 auto 4px auto;")
+        if icon_html:
+            st.markdown(f'<div style="text-align:center;">{icon_html}</div>', unsafe_allow_html=True)
         if st.button(
-            f"{critter['emoji']}  Chat with {critter['name']}!",
+            f"Chat with {critter['name']}!",
             key="chat_with",
             use_container_width=True,
         ):
@@ -207,8 +211,12 @@ def render_home():
             }}
             </style>
             """, unsafe_allow_html=True)
+            # Icon above each strip button
+            icon_html = get_critter_icon_img(c["id"], size=32, style="display:block;margin:0 auto 2px auto;")
+            if icon_html:
+                st.markdown(f'<div style="text-align:center;">{icon_html}</div>', unsafe_allow_html=True)
             if st.button(
-                f"{c['emoji']} {c['name']}",
+                c["name"],
                 key=f"strip_{c['id']}",
                 use_container_width=True,
             ):
